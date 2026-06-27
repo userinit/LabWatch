@@ -1,6 +1,8 @@
 # This file will contain the logic for collecting the data from the system of the home lab
+import asyncio
 import psutil
 import time
+from sender import send_metrics
 
 prev_net = None
 prev_time = None
@@ -28,19 +30,28 @@ def get_network():
     prev_time = now
 
     return {
-        "send_mbit_s": (delta_sent / 1024 ** 2 * 8 / dt), # Rate in Mbps
-        "recv_mbit_s": (delta_recv / 1024 ** 2 * 8 / dt) # Rate in Mbps
+        "net_send_mbps": (delta_sent / 1024 ** 2 * 8 / dt), # Rate in Mbps
+        "net_recv_mbps": (delta_recv / 1024 ** 2 * 8 / dt) # Rate in Mbps
     }
 
-while True:
-    cpu = psutil.cpu_percent()
-    ram = psutil.virtual_memory().percent
-    network = get_network()
-    if first_run:
-        first_run = False
+async def collect_metrics():
+    global first_run
+    while True:
+        cpu = psutil.cpu_percent()
+        ram = psutil.virtual_memory().percent
+        network = get_network()
+        if first_run:
+            first_run = False
+            time.sleep(2)
+            continue
+        metrics = {
+            "timestamp": time.time(), 
+            "cpu": cpu,
+            "ram": ram,
+            "net_send_mbps": network["net_send_mbps"],
+            "net_recv_mbps": network["net_recv_mbps"]
+        }
+        await send_metrics(metrics)
         time.sleep(2)
-        continue
-    print(cpu)
-    print(ram)
-    print(network)
-    time.sleep(2)
+
+asyncio.run(collect_metrics())

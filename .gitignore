@@ -1,1 +1,5 @@
 venv/
+scripts/*
+agent/__pycache__/
+backend/__pycache__/
+backend/routers/__pycache__/
