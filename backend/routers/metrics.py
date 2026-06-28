@@ -8,6 +8,10 @@ router = APIRouter()
 def dump():
     return metrics_buffer
 
+@router.get("/metrics/latest")
+def return_latest():
+    return metrics_buffer[-1]
+
 @router.post("/metrics")
 def ingest(metric: Metric):
     metrics_buffer.append(metric.model_dump())
