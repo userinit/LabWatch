@@ -1,6 +1,8 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
+import "chartjs-adapter-date-fns";
 import { 
     Chart as ChartJS,
+    TimeScale,
     CategoryScale,
     LinearScale,
     PointElement,
@@ -13,6 +15,7 @@ import {
 import { Line } from "react-chartjs-2";
 
 ChartJS.register(
+    TimeScale,
     CategoryScale,
     LinearScale,
     PointElement,
@@ -25,59 +28,50 @@ ChartJS.register(
 
 export function App() {
     const [analyticsData, setAnalyticsData] = useState([]);
-    const effectRan = useRef(false);
-    useEffect(() => {
-        if (effectRan.current) return;
-            fetchAnalytics();
-            effectRan.current = true;
-    }, []);
 
-    // Line chart config
-    const lineOptions = {
-        scales: {
-            x: {
-                display: false
-            }
-        },
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-            tooltip: {
-                displayColors: false,
-                callbacks: {
-                    title: (context) => {
-                        const timestamp = context[0].label;
-                        const time = new Date(timestamp * 1000).toLocaleTimeString([], {
-                            hour: '2-digit',
-                            minute: '2-digit',
-                            second: '2-digit',
-                            hour12: false
-                        });
-                        return time;
-                    }
+    // Find highest peak in dataset
+    const currentSpikes = analyticsData?.flatMap(item => [
+        item.net_sent_mbps ?? 0, item.net_recv_mbps ?? 0
+    ]) ?? [];
+    const highestPeak = currentSpikes?.length > 0 ? Math.max(...currentSpikes) : 0;
+
+    // 20% padding buffer and 5Mbps min ceiling
+    const dynamicCeiling = Math.max(highestPeak * 1.2, 5);
+
+    // Ensures that when the metrics count reaches max, last item is added and first is deleted
+    const updateMetrics = (item) => {
+        setAnalyticsData((prev) => {
+            if (prev?.at(-1)?.timestamp !== item.timestamp) {
+                const updated = [...prev, item];
+                if (updated?.length > 60) {
+                    updated.shift();
                 }
+                return updated;
             }
+            return (prev ?? []);
+        });
+    }
+
+    // Fetches the last metric from the API (dynamic update)
+    async function retrieveLatestMetric() {
+        try {
+            const res = await fetch("http://localhost:8000/metrics/latest", {
+                method: "GET"
+            });
+            if (res.ok) {
+                const data = await res.json();
+                updateMetrics(data);
+            }
+            else {
+                console.error(res);
+            }
+        }
+        catch (err) {
+            console.error(err);
         }
     }
 
-    // CPU line chart
-    const cpuLine = {
-        labels: analyticsData?.map(item => item.timestamp) ?? [],
-        datasets: [
-            {
-                label: "CPU Usage",
-                data: analyticsData?.map(item => item.cpu) ?? [],
-                backgroundColor: "#FF6384", // pink-red
-                borderColor: "#FF6384"
-            }
-        ]
-    }
-
-    // const cpuMetrics = analyticsData.map(({cpu}) => cpu);
-    // const ramMetrics = analyticsData.map(({ram}) => ram);
-    // const networkSend = analyticsData.map(({net_send_mbps}) => net_send_mbps);
-    // const networkRecv = analyticsData.map(({net_recv_mbps}) => net_recv_mbps);
-
+    // Fetches all metrics from the API (initial load)
     async function fetchAnalytics() {
         try {
             const res = await fetch("http://localhost:8000/metrics", {
@@ -96,30 +90,252 @@ export function App() {
         }
     }
 
+
+
+    const effectRan = useRef(false);
+    useEffect(() => {
+        if (effectRan.current) return;
+        fetchAnalytics();
+        effectRan.current = true;
+
+        let timerId
+
+        function loop() {
+            retrieveLatestMetric()
+            .catch(err => console.error(err))
+            .finally(() => {
+                timerId = setTimeout(loop, 1800); // polls every 1.8s instead of 2s to prevent desync
+            });
+        }
+
+        loop();
+
+        return () => clearTimeout(timerId);
+
+    }, []);
+
+    // Line chart config for CPU and RAM
+    const lineOptions = {
+        scales: {
+            x: {
+                display: false,
+                type: "time",
+                time: {
+                    unit: "second",
+                    displayFormats: {
+                        second: "HH:mm:ss",
+                    }
+                },
+                min: Date.now() - 120000, // 120s or 2 mins ago
+                max: Date.now()
+            },
+            y: {
+                min: 0,
+                max: 100,
+                ticks: {
+                    callback: (value) => `${Number(value)}%`
+                }
+            }
+        },
+        responsive: true,
+        animation: false,
+        maintainAspectRatio: false,
+        datasets: {
+            line: {
+                radius: 0,
+                // hitRadius: 20,
+                // pointHoverRadius: 4,
+                borderWidth: 1
+            }
+        },
+        interaction: {
+            mode: "index",
+            intersect: false
+        },
+        plugins: {
+            tooltip: {
+                displayColors: false,
+                callbacks: {
+                    title: (context) => {
+                        const value = context[0]?.raw?.x; // raw date object
+                        return new Intl.DateTimeFormat('en-US', {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                            second: "2-digit",
+                            hour12: false
+                        }).format(new Date(value));
+                    },
+                    label: (context) => {
+                        const label = context?.dataset?.label // i.e. "CPU Usage"
+                        const value = context?.raw?.y; // raw percentage
+                        return `${label}: ${value}%`;
+                    }
+                }
+            }
+        }
+    }
+    
+    // Line chart options for network
+    const networkOptions = {
+        scales: {
+            x: {
+                display: false,
+                type: "time",
+                time: {
+                    unit: "second",
+                    displayFormats: {
+                        second: "HH:mm:ss"
+                    }
+                },
+                min: Date.now() - 120000, // 2 mins ago
+                max: Date.now()
+            },
+            y: {
+                type: "linear",
+                min: 0,
+                max: dynamicCeiling,
+                ticks: {
+                    callback: (value) => `${Number(value).toFixed(1)} Mbps`
+                }
+
+            }
+        },
+        interaction: {
+            mode: "index",
+            intersect: false
+        },
+        responsive: true,
+        animation: false,
+        maintainAspectRatio: false,
+        datasets: {
+            line: {
+                pointRadius: 0,
+                pointHoverRadius: 4,
+                borderWidth: 1
+            }
+        },
+        plugins: {
+            tooltip: {
+                displayColors: false,
+                callbacks: {
+                    title: (context) => {
+                        const value = context[0]?.raw?.x;
+                        return Intl.DateTimeFormat('en-US', {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                            second: "2-digit",
+                            hour12: false
+                        }).format(new Date(value));
+                    },
+                    label: (context) => {
+                        const label = context?.dataset?.label
+                        const value = context?.raw?.y;
+                        return `${label}: ${Number(value).toFixed(3)}Mbps`;
+                    }
+                }
+            },
+            legend: {
+                labels: {
+                    generateLabels: (chart) => {
+                        return chart.data.datasets.map((dataset, index) => {
+                            const isSend = dataset.label === "Send";
+                            return {
+                                text: dataset.label,
+                                datasetIndex: index,
+                                hidden: !chart.isDatasetVisible(index),
+                                fillStyle: isSend ? "transparent" : dataset.borderColor,
+                                strokeStyle: dataset.borderColor,
+                                lineWidth: 2,
+                                lineDash: isSend ? [3.2, 3.2] : [],
+                                fontColor: "#636464"
+                            }
+                        })
+                    }
+                }
+            }
+        }
+    }
+
+    // CPU line chart
+    const cpuLine = useMemo(() => {
+        const points = analyticsData?.map(item => ({
+            x: new Date(Number(item.timestamp ?? 0) * 1000),
+            y: item.cpu ?? 0
+        })) ?? [];
+
+        return {
+            datasets: [
+                {
+                    label: "CPU Usage",
+                    data: points,
+                    fill: true,
+                    backgroundColor: "rgba(255, 99, 132, 0.2)",
+                    borderColor: "#FF6384"
+                }
+            ]
+        }
+    });
+
+    // RAM line chart
+    const ramLine = useMemo(() => {
+        const points = analyticsData?.map(item => ({
+            x: new Date(Number(item.timestamp ?? 0) * 1000),
+            y: item.ram ?? 0
+        })) ?? [];
+        return {
+            datasets: [
+                {
+                    label: "RAM Usage",
+                    data: points,
+                    fill: true,
+                    backgroundColor: "rgba(255, 144, 99, 0.2)",
+                    borderColor: "#FF9063",
+                }
+            ]
+        }
+    });
+
+    // Network send/recv chart
+    const netLine = useMemo(() => {
+        const netSend = analyticsData?.map(item => ({
+            x: new Date(Number(item.timestamp ?? 0) * 1000),
+            y: item.net_send_mbps ?? 0
+        })) ?? [];
+        const netRecv = analyticsData?.map(item => ({
+            x: new Date(Number(item.timestamp ?? 0) * 1000),
+            y: item.net_recv_mbps ?? 0
+        })) ?? [];
+
+        return {
+            datasets: [
+                {
+                    label: "Send",
+                    data: netSend,
+                    backgroundColor: "#FF63D2",
+                    borderColor: "#FF63D2",
+                    borderDash: [5, 5]
+                },
+                {
+                    label: "Receive",
+                    data: netRecv,
+                    backgroundColor: "#FF63D2",
+                    borderColor: "#FF63D2"
+                }
+            ]
+        }
+    });
+
     return (
         <div className="max-w-7xl mx-auto w-full">
-            {console.log(analyticsData)}
-            <Line data={cpuLine} options={lineOptions} />
-            {/* <table className="mx-auto">
-                <thead>
-                    <tr>
-                        <th>CPU%</th>
-                        <th>RAM%</th>
-                        <th>Send (Mbps)</th>
-                        <th>Receive (Mbps)</th>
-                    </tr>
-                </thead>
-                {analyticsData.length !== 0 && analyticsData.map((item) => (
-                    <tbody key={item.timestamp}>
-                        <tr>
-                            <td>{item.cpu}</td>
-                            <td>{item.ram}</td>
-                            <td>{item.net_send_mbps}</td>
-                            <td>{item.net_recv_mbps}</td>
-                        </tr>
-                    </tbody>
-                ))}
-            </table> */}
+            {analyticsData?.length === 0 ? (
+                <p>Loading metrics...</p>
+            ) : (
+                <div className="relative flex-1 h-100">
+                    <Line data={cpuLine} options={lineOptions} />
+                    <Line data={ramLine} options={lineOptions} />
+                    <Line data={netLine} options={networkOptions} />
+                </div>
+            )}
         </div>
     );
 }

@@ -1,2 +1,2 @@
 from collections import deque
-metrics_buffer = deque(maxlen=300)
+metrics_buffer = deque(maxlen=60)
