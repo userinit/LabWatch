@@ -1,5 +1,6 @@
 venv/
 scripts/*
-agent/__pycache__/
-backend/__pycache__/
-backend/routers/__pycache__/
+
+# removes all __pycache__ data
+**/__pycache__/
+*.py[cod]

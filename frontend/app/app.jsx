@@ -31,7 +31,7 @@ export function App() {
 
     // Find highest peak in dataset
     const currentSpikes = analyticsData?.flatMap(item => [
-        item.net_sent_mbps ?? 0, item.net_recv_mbps ?? 0
+        item.net_sent ?? 0, item.net_recv ?? 0
     ]) ?? [];
     const highestPeak = currentSpikes?.length > 0 ? Math.max(...currentSpikes) : 0;
 
@@ -89,8 +89,6 @@ export function App() {
             console.error(err);
         }
     }
-
-
 
     const effectRan = useRef(false);
     useEffect(() => {
@@ -230,7 +228,7 @@ export function App() {
                     label: (context) => {
                         const label = context?.dataset?.label
                         const value = context?.raw?.y;
-                        return `${label}: ${Number(value).toFixed(3)}Mbps`;
+                        return `${label}: ${Number(value).toFixed(2)}Mbps`;
                     }
                 }
             },
@@ -299,11 +297,11 @@ export function App() {
     const netLine = useMemo(() => {
         const netSend = analyticsData?.map(item => ({
             x: new Date(Number(item.timestamp ?? 0) * 1000),
-            y: item.net_send_mbps ?? 0
+            y: item.net_send ?? 0
         })) ?? [];
         const netRecv = analyticsData?.map(item => ({
             x: new Date(Number(item.timestamp ?? 0) * 1000),
-            y: item.net_recv_mbps ?? 0
+            y: item.net_recv ?? 0
         })) ?? [];
 
         return {

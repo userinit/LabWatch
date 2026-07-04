@@ -1,4 +1,5 @@
 from fastapi import APIRouter
+from fastapi.exceptions import HTTPException
 from storage import metrics_buffer
 from schemas import Metric
 
@@ -10,7 +11,10 @@ def dump():
 
 @router.get("/metrics/latest")
 def return_latest():
-    return metrics_buffer[-1]
+    try:
+        return metrics_buffer[-1]
+    except IndexError:
+        raise HTTPException(status_code=404, detail="No data has been captured yet.")
 
 @router.post("/metrics")
 def ingest(metric: Metric):
