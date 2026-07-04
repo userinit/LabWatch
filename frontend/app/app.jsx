@@ -11,6 +11,7 @@ import {
     Tooltip,
     Legend,
     Filler,
+    plugins,
 } from 'chart.js';
 import { Line } from "react-chartjs-2";
 
@@ -30,13 +31,17 @@ export function App() {
     const [analyticsData, setAnalyticsData] = useState([]);
 
     // Find highest peak in dataset
-    const currentSpikes = analyticsData?.flatMap(item => [
+    const currentNetSpikes = analyticsData?.flatMap(item => [
         item.net_sent ?? 0, item.net_recv ?? 0
     ]) ?? [];
-    const highestPeak = currentSpikes?.length > 0 ? Math.max(...currentSpikes) : 0;
+    const highestNetPeak = currentNetSpikes?.length > 0 ? Math.max(...currentNetSpikes) : 0;
+    const dynamicNetCeiling = Math.max(highestNetPeak * 1.2, 5); // 20% padding buffer and 5Mbps min ceiling
 
-    // 20% padding buffer and 5Mbps min ceiling
-    const dynamicCeiling = Math.max(highestPeak * 1.2, 5);
+    const currentDiskSpikes = analyticsData?.flatMap(item => [
+        item.disk_read ?? 0, item.disk_write ?? 0
+    ]) ?? [];
+    const highestDiskPeak = currentDiskSpikes?.length > 0 ? Math.max(...currentDiskSpikes) : 0;
+    const dynamicDiskCeiling = Math.max(highestDiskPeak * 1.2, 5);
 
     // Ensures that when the metrics count reaches max, last item is added and first is deleted
     const updateMetrics = (item) => {
@@ -171,7 +176,7 @@ export function App() {
                 }
             }
         }
-    }
+    };
     
     // Line chart options for network
     const networkOptions = {
@@ -191,7 +196,7 @@ export function App() {
             y: {
                 type: "linear",
                 min: 0,
-                max: dynamicCeiling,
+                max: dynamicNetCeiling,
                 ticks: {
                     callback: (value) => `${Number(value).toFixed(1)} Mbps`
                 }
@@ -252,7 +257,88 @@ export function App() {
                 }
             }
         }
-    }
+    };
+
+    const diskOptions = {
+        scales: {
+            x: {
+                display: false,
+                type: "time",
+                time: {
+                    unit: "second",
+                    displayFormats: {
+                        second: "HH:mm:ss"
+                    }
+                },
+                min: Date.now() - 120000, // 2 mins ago
+                max: Date.now()
+            },
+            y: {
+                beginAtZero: true,
+                type: "linear",
+                min: 0,
+                max: dynamicDiskCeiling,
+                ticks: {
+                    callback: (value) => `${Number(value).toFixed(1)} MB/s`
+                }
+
+            }
+        },
+        interaction: {
+            mode: "index",
+            intersect: false
+        },
+        responsive: true,
+        animation: false,
+        maintainAspectRatio: false,
+        datasets: {
+            line: {
+                pointRadius: 0,
+                pointHoverRadius: 4,
+                borderWidth: 1
+            }
+        },
+        plugins: {
+            tooltip: {
+                displayColors: false,
+                callbacks: {
+                    title: (context) => {
+                        const value = context[0]?.raw?.x;
+                        return Intl.DateTimeFormat('en-US', {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                            second: "2-digit",
+                            hour12: false
+                        }).format(new Date(value));
+                    },
+                    label: (context) => {
+                        const label = context?.dataset?.label
+                        const value = context?.raw?.y;
+                        return `${label}: ${Number(value).toFixed(2)}MB/s`;
+                    }
+                }
+            },
+            legend: {
+                labels: {
+                    generateLabels: (chart) => {
+                        return chart.data.datasets.map((dataset, index) => {
+                            const isRead = dataset.label === "Read";
+                            return {
+                                text: dataset.label,
+                                datasetIndex: index,
+                                hidden: !chart.isDatasetVisible(index),
+                                fillStyle: isRead ? "transparent" : dataset.borderColor,
+                                strokeStyle: dataset.borderColor,
+                                lineWidth: 2,
+                                lineDash: isRead ? [3.2, 3.2] : [],
+                                fontColor: "#636464"
+                            }
+                        })
+                    }
+                }
+            }
+        }
+    };
 
     // CPU line chart
     const cpuLine = useMemo(() => {
@@ -323,6 +409,35 @@ export function App() {
         }
     });
 
+    const diskLine = useMemo(() => {
+        const diskRead = analyticsData?.map(item => ({
+            x: new Date(Number(item.timestamp ?? 0) * 1000),
+            y: item.disk_read ?? 0
+        })) ?? [];
+        const diskWrite = analyticsData?.map(item => ({
+            x: new Date(Number(item.timestamp ?? 0) * 1000),
+            y: item.disk_write ?? 0
+        })) ?? [];
+
+        return {
+            datasets: [
+                {
+                    label: "Read",
+                    data: diskRead,
+                    backgroundColor: "#FFC463",
+                    borderColor: "#FFC463",
+                    borderDash: [5, 5]
+                },
+                {
+                    label: "Write",
+                    data: diskWrite,
+                    backgroundColor: "#FFC463",
+                    borderColor: "#FFC463"
+                }
+            ]
+        }
+    });
+
     return (
         <div className="max-w-7xl mx-auto w-full">
             {analyticsData?.length === 0 ? (
@@ -332,6 +447,7 @@ export function App() {
                     <Line data={cpuLine} options={lineOptions} />
                     <Line data={ramLine} options={lineOptions} />
                     <Line data={netLine} options={networkOptions} />
+                    <Line data={diskLine} options={diskOptions} />
                 </div>
             )}
         </div>
