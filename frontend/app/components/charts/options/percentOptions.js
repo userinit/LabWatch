@@ -24,6 +24,9 @@ export const percentOptions = {
                     return `${label}: ${value}%`;
                 }
             }
+        },
+        legend: {
+            display: false
         }
     }
 }

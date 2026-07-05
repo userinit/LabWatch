@@ -2,6 +2,7 @@ import { CpuChart } from "./components/charts/lines/CpuChart";
 import { RamChart } from "./components/charts/lines/RamChart";
 import { NetworkChart } from "./components/charts/lines/NetworkChart";
 import { DiskChart } from "./components/charts/lines/DiskChart";
+import { ChartCard } from "./components/ui/ChartCard";
 import { useState, useEffect, useRef, useMemo } from "react";
 import "chartjs-adapter-date-fns";
 import { 
@@ -33,6 +34,7 @@ ChartJS.register(
 
 export function App() {
     const [analyticsData, setAnalyticsData] = useState([]);
+    const [activeChart, setActiveChart] = useState("");
 
     // Find highest peak in dataset
     const currentNetSpikes = analyticsData?.flatMap(item => [
@@ -126,12 +128,23 @@ export function App() {
             {analyticsData?.length === 0 ? (
                 <p>Loading metrics...</p>
             ) : (
-                <div className="relative flex-1 h-100">
-                    <CpuChart analyticsData={analyticsData} />
-                    <RamChart analyticsData={analyticsData} />
-                    <NetworkChart analyticsData={analyticsData} />
-                    <DiskChart analyticsData={analyticsData} />
-                </div>
+                <>
+                    {/* New */}
+                    <div className="grid grid-cols-2">
+                        <ChartCard title="CPU Usage">
+                            <CpuChart analyticsData={analyticsData} />
+                        </ChartCard>
+                        <ChartCard title="RAM Usage">
+                            <RamChart analyticsData={analyticsData} />
+                        </ChartCard>
+                        <ChartCard title="Network Usage">
+                            <NetworkChart analyticsData={analyticsData} />
+                        </ChartCard>
+                        <ChartCard title="Disk Usage">
+                            <DiskChart analyticsData={analyticsData} />
+                        </ChartCard>
+                    </div>
+                </>
             )}
         </div>
     );
