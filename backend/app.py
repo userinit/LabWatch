@@ -1,6 +1,6 @@
 from fastapi import FastAPI, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
-from routers import metrics
+from routers import metrics, summary
 
 app = FastAPI(title="LabWatch API", version="1.0")
 router = APIRouter()
@@ -19,3 +19,4 @@ app.add_middleware(
 )
 
 app.include_router(metrics.router)
+app.include_router(summary.router)

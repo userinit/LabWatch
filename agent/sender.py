@@ -7,3 +7,6 @@ client = httpx.AsyncClient()
 
 async def send_metrics(metrics):
     await client.post(f"{url}/metrics", json=metrics)
+
+async def send_summary(summary):
+    await client.post(f"{url}/summary", json=summary)

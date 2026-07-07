@@ -2,13 +2,12 @@
 import asyncio
 import psutil
 import time
-from sender import send_metrics
+from sender import send_metrics, send_summary
 
 prev_net = None
 prev_disk = None
 prev_net_time = None
 prev_disk_time = None
-first_run = True
 
 psutil.cpu_percent(interval=None)
     
@@ -55,32 +54,79 @@ def get_disk():
     prev_disk = disk
     prev_disk_time = now
 
+    # statistics just for summary
+    disk_info = psutil.disk_usage("/")
+    disk_percent = disk_info.percent
+    disk_free_bytes = disk_info.free
+    disk_used_bytes = disk_info.used
+    disk_total_bytes = disk_info.total
+
     return {
         "disk_write": (write_delta / 1024 ** 2 / dt), # Write rate in MB/s
-        "disk_read": (read_delta / 1024 ** 2 / dt) # Read rate in MB/s
+        "disk_read": (read_delta / 1024 ** 2 / dt), # Read rate in MB/s
+        "disk_percent": disk_percent,
+        "disk_free_bytes": disk_free_bytes,
+        "disk_used_bytes": disk_used_bytes,
+        "disk_total_bytes": disk_total_bytes
     }
 
 async def collect_metrics():
-    global first_run
     while True:
-        cpu = psutil.cpu_percent()
-        ram = psutil.virtual_memory().percent
+        cpu_percent = psutil.cpu_percent(percpu=False)
+        cpu_frequency_ghz = psutil.cpu_freq(percpu=False).current / 1000
+        cpu_physical_cores = psutil.cpu_count(logical=False)
+        cpu_logical_cores = psutil.cpu_count(logical=True)
+
+        ram = psutil.virtual_memory()
+        ram_used_bytes = ram.used
+        ram_available_bytes = ram.available
+        ram_total_bytes = ram.total
+        ram_percent = ram.percent
+
         network = get_network()
         disk = get_disk()
-        if first_run:
-            first_run = False
-            time.sleep(2)
+        if disk is None or network is None:
+            await asyncio.sleep(2)
             continue
+        now = time.time()
         metrics = {
-            "timestamp": time.time(), 
-            "cpu": cpu,
-            "ram": ram,
+            "timestamp": now, 
+            "cpu": cpu_percent,
+            "ram": ram_percent,
             "net_send": network["net_send"],
             "net_recv": network["net_recv"],
             "disk_write": disk["disk_write"],
             "disk_read": disk["disk_read"]
         }
+        summary = {
+            "timestamp": now,
+            "cpu": {
+                "usage_percent": cpu_percent,
+                "frequency_ghz": cpu_frequency_ghz,
+                "physical_cores": cpu_physical_cores,
+                "logical_cores": cpu_logical_cores
+            },
+            "ram": {
+                "usage_percent": ram_percent,
+                "used_bytes": ram_used_bytes,
+                "available_bytes": ram_available_bytes,
+                "total_bytes": ram_total_bytes
+            },
+            "network": {
+                "send_mbps": network["net_send"],
+                "receive_mbps": network["net_recv"]
+            },
+            "disk": {
+                "read_mbs": disk["disk_read"],
+                "write_mbs": disk["disk_write"],
+                "usage_percent": disk["disk_percent"],
+                "free_bytes": disk["disk_free_bytes"],
+                "used_bytes": disk["disk_used_bytes"],
+                "total_bytes": disk["disk_total_bytes"]
+            }
+        }
         await send_metrics(metrics)
-        time.sleep(2)
+        await send_summary(summary)
+        await asyncio.sleep(2)
 
 asyncio.run(collect_metrics())
