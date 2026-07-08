@@ -10,7 +10,7 @@ import { RamSummary } from "./components/charts/summary/RamSummary";
 import { NetworkSummary } from "./components/charts/summary/NetworkSummary";
 import { DiskSummary } from  "./components/charts/summary/DiskSummary";
 
-// Card component-
+// Card component
 import { ChartCard } from "./components/ui/ChartCard";
 
 import { useState, useEffect, useRef, useMemo } from "react";
@@ -27,7 +27,7 @@ import {
     Legend,
     Filler,
     plugins,
-} from 'chart.js';
+} from "chart.js";
 import { Chart, Line } from "react-chartjs-2";
 
 ChartJS.register(
@@ -136,15 +136,28 @@ export function App() {
     const effectRan = useRef(false);
     useEffect(() => {
         if (effectRan.current) return;
-        fetchAnalytics();
         effectRan.current = true;
 
-        let timerId
+        let timerId;
+
+        async function init() {
+            try {
+                await fetchAnalytics();
+                loop();
+            }
+            catch (err) {
+                console.error(err);
+            }
+        }
+
+        init();
 
         async function loop() {
             try {
-                retrieveLatestMetric();
-                fetchSummary();
+                await Promise.all([
+                    retrieveLatestMetric(),
+                    fetchSummary()
+                ]);
             }
             catch (err) {
                 console.error(err);
@@ -154,8 +167,31 @@ export function App() {
             }
         }
 
-        loop();
-        return () => clearTimeout(timerId);
+        const handleVisibilityChange = async () => {
+            if (document.visibilityState === "visible") {
+                clearTimeout(timerId); // prevent race condition
+                try {
+                    await Promise.all([
+                        fetchAnalytics(),
+                        fetchSummary()
+                    ]);
+                    loop(); // restart polling after resync
+                }
+                catch (err) {
+                    console.error(err);
+                }
+            }
+            else if (document.visibilityState === "hidden") {
+                clearTimeout(timerId);
+            }
+        };
+
+        document.addEventListener("visibilitychange", handleVisibilityChange);
+
+        return () => {
+            clearTimeout(timerId);
+            document.removeEventListener("visibilitychange", handleVisibilityChange);
+        };
 
     }, []);
 
