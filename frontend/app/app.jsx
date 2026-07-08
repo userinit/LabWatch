@@ -1,8 +1,18 @@
+// Charts
 import { CpuChart } from "./components/charts/lines/CpuChart";
 import { RamChart } from "./components/charts/lines/RamChart";
 import { NetworkChart } from "./components/charts/lines/NetworkChart";
 import { DiskChart } from "./components/charts/lines/DiskChart";
+
+// Summaries
+import { CpuSummary } from "./components/charts/summary/CpuSummary";
+import { RamSummary } from "./components/charts/summary/RamSummary";
+import { NetworkSummary } from "./components/charts/summary/NetworkSummary";
+import { DiskSummary } from  "./components/charts/summary/DiskSummary";
+
+// Card component-
 import { ChartCard } from "./components/ui/ChartCard";
+
 import { useState, useEffect, useRef, useMemo } from "react";
 import "chartjs-adapter-date-fns";
 import { 
@@ -18,7 +28,7 @@ import {
     Filler,
     plugins,
 } from 'chart.js';
-import { Line } from "react-chartjs-2";
+import { Chart, Line } from "react-chartjs-2";
 
 ChartJS.register(
     TimeScale,
@@ -32,9 +42,12 @@ ChartJS.register(
     Filler
 );
 
+const apiUrl = "http://localhost:8000";
+
 export function App() {
     const [analyticsData, setAnalyticsData] = useState([]);
-    const [activeChart, setActiveChart] = useState("");
+    const [summary, setSummary] = useState([]);
+    // const [activeChart, setActiveChart] = useState("");
 
     // Find highest peak in dataset
     const currentNetSpikes = analyticsData?.flatMap(item => [
@@ -66,7 +79,7 @@ export function App() {
     // Fetches the last metric from the API (dynamic update)
     async function retrieveLatestMetric() {
         try {
-            const res = await fetch("http://localhost:8000/metrics/latest", {
+            const res = await fetch(`${apiUrl}/metrics/latest`, {
                 method: "GET"
             });
             if (res.ok) {
@@ -85,12 +98,31 @@ export function App() {
     // Fetches all metrics from the API (initial load)
     async function fetchAnalytics() {
         try {
-            const res = await fetch("http://localhost:8000/metrics", {
+            const res = await fetch(`${apiUrl}/metrics`, {
                 method: "GET"
             });
             if (res.ok) {
                 const data = await res.json();
                 setAnalyticsData(data);
+            }
+            else {
+                console.error(res);
+            }
+        }
+        catch (err) {
+            console.error(err);
+        }
+    }
+
+    async function fetchSummary() {
+        try {
+            const res = await fetch(`${apiUrl}/summary`, {
+                method: "GET"
+            });
+            if (res.ok) {
+                const data = await res.json();
+                console.log(data);
+                setSummary(data);
             }
             else {
                 console.error(res);
@@ -109,16 +141,20 @@ export function App() {
 
         let timerId
 
-        function loop() {
-            retrieveLatestMetric()
-            .catch(err => console.error(err))
-            .finally(() => {
-                timerId = setTimeout(loop, 1800); // polls every 1.8s instead of 2s to prevent desync
-            });
+        async function loop() {
+            try {
+                retrieveLatestMetric();
+                fetchSummary();
+            }
+            catch (err) {
+                console.error(err);
+            }
+            finally {
+                timerId = setTimeout(loop, 1800);
+            }
         }
 
         loop();
-
         return () => clearTimeout(timerId);
 
     }, []);
@@ -129,20 +165,27 @@ export function App() {
                 <p>Loading metrics...</p>
             ) : (
                 <>
-                    {/* New */}
                     <div className="grid grid-cols-2">
-                        <ChartCard title="CPU Usage">
-                            <CpuChart analyticsData={analyticsData} />
-                        </ChartCard>
-                        <ChartCard title="RAM Usage">
-                            <RamChart analyticsData={analyticsData} />
-                        </ChartCard>
-                        <ChartCard title="Network Usage">
-                            <NetworkChart analyticsData={analyticsData} />
-                        </ChartCard>
-                        <ChartCard title="Disk Usage">
-                            <DiskChart analyticsData={analyticsData} />
-                        </ChartCard>
+                        <ChartCard 
+                            title="CPU Usage"
+                            chart={<CpuChart analyticsData={analyticsData} />}
+                            summary={<CpuSummary summary={summary} />}
+                        />
+                        <ChartCard
+                            title="RAM Usage"
+                            chart={<RamChart analyticsData={analyticsData} />}
+                            summary={<RamSummary summary={summary} />}
+                        />
+                        <ChartCard
+                            title="Network Usage"
+                            chart={<NetworkChart analyticsData={analyticsData} />}
+                            summary={<NetworkSummary summary={summary} />}
+                        />
+                        <ChartCard
+                            title="Disk Usage"
+                            chart={<DiskChart analyticsData={analyticsData} />}
+                            summary={<DiskSummary summary={summary} />}
+                        />
                     </div>
                 </>
             )}

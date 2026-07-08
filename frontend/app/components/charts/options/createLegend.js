@@ -1,4 +1,4 @@
-export const createLegend = ({ dashedLabel }) => ({
+export const createLegend = ({ dashedLabel, isDark }) => ({
     labels: {
         generateLabels: (chart) => {
             return chart.data.datasets.map((dataset, index) => {
@@ -12,7 +12,7 @@ export const createLegend = ({ dashedLabel }) => ({
                     strokeStyle: dataset.borderColor,
                     lineWidth: 2,
                     lineDash: isDashed ? [3.2, 3.2] : [],
-                    fontColor: "rgb(99, 100, 100)"
+                    fontColor: isDark ? "rgb(153, 161, 175)" : "rgb(75, 85, 99)",
                 };
             });
         }

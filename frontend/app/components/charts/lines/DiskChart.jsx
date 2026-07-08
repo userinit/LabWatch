@@ -1,9 +1,11 @@
+import { useSystemDarkMode } from "../../../hooks/useSystemDarkMode";
 import { throughputOptions } from "../options/throughputOptions";
 import { createLegend } from "../options/createLegend";
 import { useMemo } from "react";
 import { Line } from "react-chartjs-2";
 
 export const DiskChart = ({ analyticsData }) => {
+    const isDark = useSystemDarkMode();
     const diskData = useMemo(() => {
         const diskRead = analyticsData?.map(item => ({
             x: new Date(Number(item.timestamp ?? 0) * 1000),
@@ -73,7 +75,7 @@ export const DiskChart = ({ analyticsData }) => {
                         }
                     }
                 },
-                legend: createLegend({ dashedLabel: "Read" })
+                legend: createLegend({ dashedLabel: "Read", isDark: isDark })
             }
         }
     }, [analyticsData]);
