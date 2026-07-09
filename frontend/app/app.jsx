@@ -46,7 +46,7 @@ const apiUrl = "http://localhost:8000";
 
 export function App() {
     const [analyticsData, setAnalyticsData] = useState([]);
-    const [summary, setSummary] = useState([]);
+    const [summaryData, setSummaryData] = useState([]);
     // const [activeChart, setActiveChart] = useState("");
 
     // Find highest peak in dataset
@@ -122,7 +122,7 @@ export function App() {
             if (res.ok) {
                 const data = await res.json();
                 console.log(data);
-                setSummary(data);
+                setSummaryData(data);
             }
             else {
                 console.error(res);
@@ -197,6 +197,7 @@ export function App() {
 
     return (
         <div className="max-w-7xl mx-auto w-full">
+            {console.log(summaryData)}
             {analyticsData?.length === 0 ? (
                 <p>Loading metrics...</p>
             ) : (
@@ -205,22 +206,22 @@ export function App() {
                         <ChartCard 
                             title="CPU Usage"
                             chart={<CpuChart analyticsData={analyticsData} />}
-                            summary={<CpuSummary summary={summary} />}
+                            summary={<CpuSummary summary={summaryData.summary} />}
                         />
                         <ChartCard
                             title="RAM Usage"
                             chart={<RamChart analyticsData={analyticsData} />}
-                            summary={<RamSummary summary={summary} />}
+                            summary={<RamSummary summary={summaryData.summary} />}
                         />
                         <ChartCard
                             title="Network Usage"
                             chart={<NetworkChart analyticsData={analyticsData} />}
-                            summary={<NetworkSummary summary={summary} />}
+                            summary={<NetworkSummary summary={summaryData.summary} />}
                         />
                         <ChartCard
                             title="Disk Usage"
                             chart={<DiskChart analyticsData={analyticsData} />}
-                            summary={<DiskSummary summary={summary} />}
+                            summary={<DiskSummary summary={summaryData.summary} />}
                         />
                     </div>
                 </>
