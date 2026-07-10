@@ -1,6 +1,6 @@
 export const ChartCard = ({ title, chart, summary }) => {
     return (
-        <div className="p-2 rounded bg-gray-50/80 m-2 dark:bg-gray-900/50 border border-gray-200/60 dark:border-gray-800/60">
+        <div className="card">
             {title && (
                 <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-3">
                     {title}

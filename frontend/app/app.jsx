@@ -133,6 +133,42 @@ export function App() {
         }
     }
 
+    const processTimeDifference = (timestamp) => {
+        if (!timestamp) {
+            return null
+        };
+        const nowSeconds = Math.floor(Date.now() / 1000);
+        const agentSeconds = Number(timestamp );
+        const timeDifference = Math.floor(nowSeconds - agentSeconds);
+
+        // clock can be negative due to clock sync issues
+        return Math.max(0, timeDifference);
+    };
+
+    const formatLastUpdated = (timestamp) => {
+        const seconds = processTimeDifference(timestamp);
+
+        if (seconds === null) {
+            return "Never";
+        }
+
+        const minutes = Math.floor(seconds / 60);
+        const hours = Math.floor(minutes / 60);
+        const days = Math.floor(hours / 24);
+
+        if (seconds < 5) {
+            return "Just now";
+        } else if (seconds < 60) {
+            return `${seconds} second${seconds === 1 ? "" : "s"} ago`;
+        } else if (minutes < 60) {
+            return `${minutes} minute${minutes === 1 ? "" : "s"} ago`;
+        } else if (seconds < 86400) {
+            return `${hours} hour${hours === 1 ? "" : "s"} ago`;
+        } else {
+            return `${days} day${days === 1 ? "" : "s"} ago`;
+        }
+    };
+
     const effectRan = useRef(false);
     useEffect(() => {
         if (effectRan.current) return;
@@ -202,26 +238,46 @@ export function App() {
                 <p>Loading metrics...</p>
             ) : (
                 <>
+                    <div className="card flex w-max">
+                        <span className="relative flex h-2.5 w-2.5 mr-2 pt-1.5">
+                            <span className={
+                                summaryData?.agent?.online
+                                ? "absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75" : ""
+                            }/>
+                            <span className={
+                                `relative inline-flex h-2.5 w-2.5 rounded-full
+                                ${summaryData?.agent?.online ? "bg-green-500" : "bg-red-500"}`
+                            }/>
+                        </span>
+                        <div className="grid cols-1">
+                            <h3>
+                                Agent: {summaryData?.agent?.online ? "Online" : "Offline"}
+                            </h3>
+                            <h3>
+                                Last updated: {formatLastUpdated(summaryData?.agent?.last_seen)}
+                            </h3>
+                        </div>
+                    </div>
                     <div className="grid grid-cols-2">
                         <ChartCard 
                             title="CPU Usage"
                             chart={<CpuChart analyticsData={analyticsData} />}
-                            summary={<CpuSummary summary={summaryData.summary} />}
+                            summary={<CpuSummary summary={summaryData?.summary} />}
                         />
                         <ChartCard
                             title="RAM Usage"
                             chart={<RamChart analyticsData={analyticsData} />}
-                            summary={<RamSummary summary={summaryData.summary} />}
+                            summary={<RamSummary summary={summaryData?.summary} />}
                         />
                         <ChartCard
                             title="Network Usage"
                             chart={<NetworkChart analyticsData={analyticsData} />}
-                            summary={<NetworkSummary summary={summaryData.summary} />}
+                            summary={<NetworkSummary summary={summaryData?.summary} />}
                         />
                         <ChartCard
                             title="Disk Usage"
                             chart={<DiskChart analyticsData={analyticsData} />}
-                            summary={<DiskSummary summary={summaryData.summary} />}
+                            summary={<DiskSummary summary={summaryData?.summary} />}
                         />
                     </div>
                 </>
