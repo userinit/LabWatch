@@ -4,7 +4,7 @@ import { createLegend } from "../options/createLegend";
 import { useMemo } from "react";
 import { Line } from "react-chartjs-2";
 
-export const NetworkChart = ({ chartData }) => {
+export const NetworkChart = ({ chartData, now }) => {
     const isDark = useSystemDarkMode();
     const networkData = useMemo(() => {
         const networkSend = chartData?.map(item => ({
@@ -46,7 +46,6 @@ export const NetworkChart = ({ chartData }) => {
         const highestPeak = currentSpikes?.length > 0 ? Math.max(...currentSpikes) : 0;
         const dynamicCeiling = Math.max(highestPeak * 1.2, 5);
 
-        const now = Date.now();
         return {
             ...throughputOptions,
             scales: {
@@ -80,7 +79,7 @@ export const NetworkChart = ({ chartData }) => {
                 legend: createLegend({ dashedLabel: "Send", isDark: isDark })
             }
         };
-    }, [chartData]);
+    }, [chartData, now]);
 
     return <Line data={networkData} options={options} />;
 };

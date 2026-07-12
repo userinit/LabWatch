@@ -307,22 +307,22 @@ export function App() {
                     <div className="grid grid-cols-2">
                         <ChartCard 
                             title="CPU Usage"
-                            chart={<CpuChart chartData={chartData} />}
+                            chart={<CpuChart chartData={chartData} now={now} />}
                             summary={<CpuSummary summary={summaryData?.summary} />}
                         />
                         <ChartCard
                             title="RAM Usage"
-                            chart={<RamChart chartData={chartData} />}
+                            chart={<RamChart chartData={chartData} now={now} />}
                             summary={<RamSummary summary={summaryData?.summary} />}
                         />
                         <ChartCard
                             title="Network Usage"
-                            chart={<NetworkChart chartData={chartData} />}
+                            chart={<NetworkChart chartData={chartData} now={now} />}
                             summary={<NetworkSummary summary={summaryData?.summary} />}
                         />
                         <ChartCard
                             title="Disk Usage"
-                            chart={<DiskChart chartData={chartData} />}
+                            chart={<DiskChart chartData={chartData} now={now} />}
                             summary={<DiskSummary summary={summaryData?.summary} />}
                         />
                     </div>

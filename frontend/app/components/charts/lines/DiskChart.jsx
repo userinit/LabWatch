@@ -4,7 +4,7 @@ import { createLegend } from "../options/createLegend";
 import { useMemo } from "react";
 import { Line } from "react-chartjs-2";
 
-export const DiskChart = ({ chartData }) => {
+export const DiskChart = ({ chartData, now }) => {
     const isDark = useSystemDarkMode();
     const diskData = useMemo(() => {
         const diskRead = chartData?.map(item => ({
@@ -46,7 +46,6 @@ export const DiskChart = ({ chartData }) => {
         const highestPeak = currentSpikes?.length > 0 ? Math.max(...currentSpikes) : 0;
         const dynamicCeiling = Math.max(highestPeak * 1.2, 5);
         
-        const now = Date.now();
         return {
             ...throughputOptions,
             scales: {
@@ -80,7 +79,7 @@ export const DiskChart = ({ chartData }) => {
                 legend: createLegend({ dashedLabel: "Read", isDark: isDark })
             }
         }
-    }, [chartData]);
+    }, [chartData, now]);
 
     return <Line data={diskData} options={options} />;
 };

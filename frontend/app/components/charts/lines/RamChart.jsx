@@ -2,7 +2,7 @@ import { percentOptions } from "../options/percentOptions";
 import { useMemo } from "react";
 import { Line } from "react-chartjs-2";
 
-export const RamChart = ({ chartData }) => {
+export const RamChart = ({ chartData, now }) => {
     const ramData = useMemo(() => {
         const points = chartData?.map(item => ({
             x: new Date(Number(item.timestamp ?? 0) * 1000),
@@ -24,7 +24,6 @@ export const RamChart = ({ chartData }) => {
     }, [chartData]);
 
     const options = useMemo(() => {
-        const now = Date.now();
         return {
             ...percentOptions,
             scales: {
@@ -36,7 +35,7 @@ export const RamChart = ({ chartData }) => {
                 }
             }
         }
-    }, [chartData]);
+    }, [chartData, now]);
 
     return <Line data={ramData} options={options} />;
 }

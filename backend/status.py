@@ -2,7 +2,7 @@
 import storage
 import time
 
-AGENT_TIMEOUT_SECONDS = 10 # time, in seconds, before agent is classed as offline
+AGENT_TIMEOUT_SECONDS = 5 # time, in seconds, before agent is classed as offline
 
 def get_agent_status():
     if storage.last_seen is None:
