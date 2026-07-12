@@ -4,16 +4,16 @@ import { createLegend } from "../options/createLegend";
 import { useMemo } from "react";
 import { Line } from "react-chartjs-2";
 
-export const NetworkChart = ({ analyticsData }) => {
+export const NetworkChart = ({ chartData }) => {
     const isDark = useSystemDarkMode();
     const networkData = useMemo(() => {
-        const networkSend = analyticsData?.map(item => ({
+        const networkSend = chartData?.map(item => ({
             x: new Date(Number(item.timestamp ?? 0) * 1000),
-            y: item.net_send ?? 0
+            y: item.net_send
         })) ?? [];
-        const networkReceive = analyticsData?.map(item => ({
+        const networkReceive = chartData?.map(item => ({
             x: new Date(Number(item.timestamp ?? 0) * 1000),
-            y: item.net_recv ?? 0
+            y: item.net_recv
         })) ?? [];
 
         return {
@@ -23,21 +23,23 @@ export const NetworkChart = ({ analyticsData }) => {
                     data: networkSend,
                     backgroundColor: "rgb(255, 99, 210)",
                     borderColor: "rgb(255, 99, 210)",
-                    borderDash: [5, 5]
+                    borderDash: [5, 5],
+                    spanGaps: false
                 },
                 {
                     label: "Receive",
                     data: networkReceive,
                     backgroundColor: "rgb(255, 99, 210)",
                     borderColor: "rgb(255, 99, 210)",
+                    spanGaps: false
                 }
             ]
         };
-    }, [analyticsData]);
+    }, [chartData]);
 
     const options = useMemo(() => {
         // Find highest peak in dataset and scale y-axis accordingly
-        const currentSpikes = analyticsData?.flatMap(item => [
+        const currentSpikes = chartData?.flatMap(item => [
             item.net_sent ?? 0,
             item.net_recv ?? 0
         ]) ?? [];
@@ -78,7 +80,7 @@ export const NetworkChart = ({ analyticsData }) => {
                 legend: createLegend({ dashedLabel: "Send", isDark: isDark })
             }
         };
-    }, [analyticsData]);
+    }, [chartData]);
 
     return <Line data={networkData} options={options} />;
 };

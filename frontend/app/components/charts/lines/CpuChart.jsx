@@ -2,11 +2,11 @@ import { percentOptions } from "../options/percentOptions";
 import { useMemo } from "react";
 import { Line } from "react-chartjs-2";
 
-export const CpuChart = ({ analyticsData }) => {
+export const CpuChart = ({ chartData }) => {
     const cpuData = useMemo(() => {
-        const points = analyticsData?.map(item => ({
+        const points = chartData?.map(item => ({
             x: new Date(Number(item.timestamp ?? 0) * 1000),
-            y: item.cpu ?? 0
+            y: item.cpu
         })) ?? [];
         
         return {
@@ -16,11 +16,12 @@ export const CpuChart = ({ analyticsData }) => {
                     data: points,
                     fill: true,
                     backgroundColor: "rgba(255, 99, 132, 0.2)",
-                    borderColor: "rgb(255, 99, 132)"
+                    borderColor: "rgb(255, 99, 132)",
+                    spanGaps: false
                 }
             ]
         };
-    }, [analyticsData]);
+    }, [chartData]);
     
     const options = useMemo(() => {
         const now = Date.now();
@@ -35,7 +36,7 @@ export const CpuChart = ({ analyticsData }) => {
                 }
             }
         }
-    }, [analyticsData]);
+    }, [chartData]);
 
     return <Line data={cpuData} options={options} />;
 };

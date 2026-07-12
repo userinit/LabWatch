@@ -4,14 +4,14 @@ import { createLegend } from "../options/createLegend";
 import { useMemo } from "react";
 import { Line } from "react-chartjs-2";
 
-export const DiskChart = ({ analyticsData }) => {
+export const DiskChart = ({ chartData }) => {
     const isDark = useSystemDarkMode();
     const diskData = useMemo(() => {
-        const diskRead = analyticsData?.map(item => ({
+        const diskRead = chartData?.map(item => ({
             x: new Date(Number(item.timestamp ?? 0) * 1000),
-            y: item.disk_read ?? 0
+            y: item.disk_read
         })) ?? [];
-        const diskWrite = analyticsData?.map(item => ({
+        const diskWrite = chartData?.map(item => ({
             x: new Date(Number(item.timestamp ?? 0) * 1000),
             y: item.disk_write
         })) ?? [];
@@ -23,21 +23,23 @@ export const DiskChart = ({ analyticsData }) => {
                     data: diskRead,
                     backgroundColor: "rgb(255, 196, 99)",
                     borderColor: "rgb(255, 196, 99)",
-                    borderDash: [5, 5]
+                    borderDash: [5, 5],
+                    spanGaps: false
                 },
                 {
                     label: "Write",
                     data: diskWrite,
                     backgroundColor: "rgb(255, 196, 99)",
-                    borderColor: "rgb(255, 196, 99)"
+                    borderColor: "rgb(255, 196, 99)",
+                    spanGaps: false
                 }
             ]
         }
-    }, [analyticsData]);
+    }, [chartData]);
 
     const options = useMemo(() => {
         // Find highest peak in dataset and scale y-axis accordingly
-        const currentSpikes = analyticsData?.flatMap(item => [
+        const currentSpikes = chartData?.flatMap(item => [
             item.disk_read ?? 0,
             item.disk_write ?? 0
         ]) ?? [];
@@ -78,7 +80,7 @@ export const DiskChart = ({ analyticsData }) => {
                 legend: createLegend({ dashedLabel: "Read", isDark: isDark })
             }
         }
-    }, [analyticsData]);
+    }, [chartData]);
 
     return <Line data={diskData} options={options} />;
 };

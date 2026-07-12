@@ -13,6 +13,9 @@ import { DiskSummary } from  "./components/charts/summary/DiskSummary";
 // Card component
 import { ChartCard } from "./components/ui/ChartCard";
 
+// Chart helper function
+import { insertMissingDataPoints } from "./utils/chartUtils";
+
 import { useState, useEffect, useRef, useMemo } from "react";
 import "chartjs-adapter-date-fns";
 import { 
@@ -49,6 +52,8 @@ export function App() {
     const [summaryData, setSummaryData] = useState([]);
     const [backendOnline, setBackendOnline] = useState(null);
     const [now, setNow] = useState(Date.now());
+
+    const chartData = useMemo(() => insertMissingDataPoints(analyticsData), [analyticsData]);
 
     // Find highest peak in dataset
     const currentNetSpikes = analyticsData?.flatMap(item => [
@@ -209,6 +214,7 @@ export function App() {
             }
             catch (err) {
                 console.error(err);
+                clearTimeout(backendPollingTimerId);
             }
         }
 
@@ -237,7 +243,7 @@ export function App() {
                         fetchAnalytics(),
                         fetchSummary()
                     ]);
-                    loop(); // restart polling after resync
+                    backendPollingTimerId = setTimeout(loop, 1800); // reschedule polling after resync
                 }
                 catch (err) {
                     console.error(err);
@@ -301,27 +307,26 @@ export function App() {
                     <div className="grid grid-cols-2">
                         <ChartCard 
                             title="CPU Usage"
-                            chart={<CpuChart analyticsData={analyticsData} />}
+                            chart={<CpuChart chartData={chartData} />}
                             summary={<CpuSummary summary={summaryData?.summary} />}
                         />
                         <ChartCard
                             title="RAM Usage"
-                            chart={<RamChart analyticsData={analyticsData} />}
+                            chart={<RamChart chartData={chartData} />}
                             summary={<RamSummary summary={summaryData?.summary} />}
                         />
                         <ChartCard
                             title="Network Usage"
-                            chart={<NetworkChart analyticsData={analyticsData} />}
+                            chart={<NetworkChart chartData={chartData} />}
                             summary={<NetworkSummary summary={summaryData?.summary} />}
                         />
                         <ChartCard
                             title="Disk Usage"
-                            chart={<DiskChart analyticsData={analyticsData} />}
+                            chart={<DiskChart chartData={chartData} />}
                             summary={<DiskSummary summary={summaryData?.summary} />}
                         />
                     </div>
                 </>
-            {/* )} */}
         </div>
     );
 }
