@@ -3,6 +3,7 @@ import asyncio
 import psutil
 import time
 from sender import send_metrics, send_summary
+from httpx import ConnectError
 
 prev_net = None
 prev_disk = None
@@ -125,8 +126,14 @@ async def collect_metrics():
                 "total_bytes": disk["disk_total_bytes"]
             }
         }
-        await send_metrics(metrics)
-        await send_summary(summary)
+        try:
+            await send_metrics(metrics)
+            await send_summary(summary)  
+        except ConnectError:
+            print("Backend unavailable. Retrying in 10 seconds.")
+            await asyncio.sleep(10)
+            continue
+
         await asyncio.sleep(2)
 
 asyncio.run(collect_metrics())

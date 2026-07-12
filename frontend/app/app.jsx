@@ -47,7 +47,8 @@ const apiUrl = "http://localhost:8000";
 export function App() {
     const [analyticsData, setAnalyticsData] = useState([]);
     const [summaryData, setSummaryData] = useState([]);
-    // const [activeChart, setActiveChart] = useState("");
+    const [backendOnline, setBackendOnline] = useState(null);
+    const [now, setNow] = useState(Date.now());
 
     // Find highest peak in dataset
     const currentNetSpikes = analyticsData?.flatMap(item => [
@@ -123,12 +124,15 @@ export function App() {
                 const data = await res.json();
                 console.log(data);
                 setSummaryData(data);
+                setBackendOnline(true);
             }
             else {
+                setBackendOnline(true);
                 console.error(res);
             }
         }
         catch (err) {
+            setBackendOnline(false);
             console.error(err);
         }
     }
@@ -137,8 +141,8 @@ export function App() {
         if (!timestamp) {
             return null
         };
-        const nowSeconds = Math.floor(Date.now() / 1000);
-        const agentSeconds = Number(timestamp );
+        const nowSeconds = Math.floor(now / 1000);
+        const agentSeconds = Number(timestamp);
         const timeDifference = Math.floor(nowSeconds - agentSeconds);
 
         // clock can be negative due to clock sync issues
@@ -169,12 +173,34 @@ export function App() {
         }
     };
 
+    const determineAgentStatus = (agentOnline, backendOnline) => {
+        if (backendOnline === null) {
+            return "Connecting";
+        }
+        if (backendOnline === false) {
+            return "Unknown";
+        }
+        return agentOnline ? "Online" : "Offline";
+    }
+
+    const determineBackendStatus = (backendOnline) => {
+        if (backendOnline === null) {
+            return "Connecting";
+        }
+        return backendOnline ? "Connected" : "Disconnected";
+    }
+
     const effectRan = useRef(false);
     useEffect(() => {
         if (effectRan.current) return;
         effectRan.current = true;
 
-        let timerId;
+        let backendPollingTimerId;
+        let relativeTimeIntervalId;
+
+        relativeTimeIntervalId = setInterval(() => {
+            setNow(Date.now());
+        }, 1000);
 
         async function init() {
             try {
@@ -199,13 +225,13 @@ export function App() {
                 console.error(err);
             }
             finally {
-                timerId = setTimeout(loop, 1800);
+                backendPollingTimerId = setTimeout(loop, 1800);
             }
         }
 
         const handleVisibilityChange = async () => {
             if (document.visibilityState === "visible") {
-                clearTimeout(timerId); // prevent race condition
+                clearTimeout(backendPollingTimerId); // prevent race condition
                 try {
                     await Promise.all([
                         fetchAnalytics(),
@@ -218,14 +244,15 @@ export function App() {
                 }
             }
             else if (document.visibilityState === "hidden") {
-                clearTimeout(timerId);
+                clearTimeout(backendPollingTimerId);
             }
         };
 
         document.addEventListener("visibilitychange", handleVisibilityChange);
 
         return () => {
-            clearTimeout(timerId);
+            clearTimeout(backendPollingTimerId);
+            clearInterval(relativeTimeIntervalId);
             document.removeEventListener("visibilitychange", handleVisibilityChange);
         };
 
@@ -233,29 +260,42 @@ export function App() {
 
     return (
         <div className="max-w-7xl mx-auto w-full">
-            {console.log(summaryData)}
-            {analyticsData?.length === 0 ? (
-                <p>Loading metrics...</p>
-            ) : (
                 <>
-                    <div className="card flex w-max">
-                        <span className="relative flex h-2.5 w-2.5 mr-2 pt-1.5">
-                            <span className={
-                                summaryData?.agent?.online
-                                ? "absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75" : ""
-                            }/>
-                            <span className={
-                                `relative inline-flex h-2.5 w-2.5 rounded-full
-                                ${summaryData?.agent?.online ? "bg-green-500" : "bg-red-500"}`
-                            }/>
-                        </span>
-                        <div className="grid cols-1">
-                            <h3>
-                                Agent: {summaryData?.agent?.online ? "Online" : "Offline"}
-                            </h3>
-                            <h3>
-                                Last updated: {formatLastUpdated(summaryData?.agent?.last_seen)}
-                            </h3>
+                    <div>
+                        <div className="card flex w-max">
+                            <span className="relative flex h-2.5 w-2.5 mr-2 pt-1.5">
+                                <span className={
+                                    backendOnline ? "absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75" : ""
+                                } />
+                                <span className={`relative inline-flex h-2.5 w-2.5 rounded-full ${
+                                    backendOnline === true ? "bg-green-500" :
+                                    backendOnline === false ? "bg-red-500" :
+                                    "bg-amber-500"}`
+                                } />
+                            </span>
+                            <div className="grid cols-1">
+                                <h3>Backend: {determineBackendStatus(backendOnline)}</h3>
+                            </div>
+                        </div>
+                        <div className="card flex w-max">
+                            <span className="relative flex h-2.5 w-2.5 mr-2 pt-1.5">
+                                <span className={
+                                    (backendOnline && summaryData?.agent?.online)
+                                    ? "absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75" : ""
+                                } />
+                                <span className={
+                                    `relative inline-flex h-2.5 w-2.5 rounded-full
+                                    ${!backendOnline ? "bg-amber-500" : summaryData?.agent?.online ? "bg-green-500" : "bg-red-500"}`
+                                } />
+                            </span>
+                            <div className="grid cols-1">
+                                <h3>
+                                    Agent: {determineAgentStatus(summaryData?.agent?.online ?? null, backendOnline)}
+                                </h3>
+                                <h3>
+                                    Last updated: {formatLastUpdated(summaryData?.agent?.last_seen)}
+                                </h3>
+                            </div>
                         </div>
                     </div>
                     <div className="grid grid-cols-2">
@@ -281,7 +321,7 @@ export function App() {
                         />
                     </div>
                 </>
-            )}
+            {/* )} */}
         </div>
     );
 }

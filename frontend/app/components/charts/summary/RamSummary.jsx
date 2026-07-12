@@ -7,10 +7,10 @@ export const RamSummary = ({ summary }) => {
                 </h3>
                 <h3 className="chart-value">
                     {
-                        (summary?.ram?.used_bytes / (1024 ** 3))?.toFixed(1)
-                    } / {
-                        (summary?.ram?.total_bytes / (1024 ** 3))?.toFixed(1)
-                    }GB
+                        summary?.ram?.used_bytes != null && summary?.ram?.total_bytes != null ?
+                        `${(summary.ram.used_bytes / (1024 ** 3)).toFixed(1)} / ` +
+                        `${(summary.ram.total_bytes / (1024 ** 3)).toFixed(1)}GB` : "--"
+                    }
                 </h3>
             </div>
             <div>
@@ -18,7 +18,10 @@ export const RamSummary = ({ summary }) => {
                     Available
                 </h3>
                 <h3 className="chart-value">
-                    {(summary?.ram?.available_bytes / (1024 ** 3))?.toFixed(1)}GB
+                    {
+                        summary?.ram?.available_bytes != null ? 
+                        `${(summary.ram.available_bytes / (1024 ** 3)).toFixed(1)}GB` : "--"
+                    }
                 </h3>
             </div>
             <div>
@@ -26,7 +29,10 @@ export const RamSummary = ({ summary }) => {
                     Total
                 </h3>
                 <h3 className="chart-value">
-                    {(summary?.ram?.total_bytes / (1024 ** 3))?.toFixed(1)}GB
+                    {
+                        summary?.ram?.total_bytes != null ? 
+                        `${(summary.ram.total_bytes / (1024 ** 3)).toFixed(1)}GB` : "--"
+                    }
                 </h3>
             </div>
         </>

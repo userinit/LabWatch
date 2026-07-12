@@ -6,7 +6,10 @@ export const NetworkSummary = ({ summary }) => {
                     Download
                 </h3>
                 <h3 className="chart-value">
-                {summary?.network?.receive_mbps?.toFixed(2)}Mbps 
+                    {
+                        summary?.network?.receive_mbps != null ?
+                        `${summary.network.receive_mbps.toFixed(2)}Mbps` : "--"
+                    }
                 </h3>
             </div>
             <div>
@@ -14,7 +17,10 @@ export const NetworkSummary = ({ summary }) => {
                     Upload
                 </h3>
                 <h3 className="chart-value">
-                    {summary?.network?.send_mbps?.toFixed(2)}Mbps
+                    {
+                        summary?.network?.send_mbps != null ?
+                        `${summary.network.send_mbps.toFixed(2)}Mbps` : "--"
+                    }
                 </h3>
             </div>
         </>

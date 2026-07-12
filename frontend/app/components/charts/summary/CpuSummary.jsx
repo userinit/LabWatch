@@ -6,7 +6,10 @@ export const CpuSummary = ({ summary }) => {
                     Usage
                 </h3>
                 <h3 className="chart-value">
-                    {summary?.cpu?.usage_percent?.toFixed(1)}%
+                    {
+                        summary?.cpu?.usage_percent != null ?
+                        `${summary.cpu.usage_percent.toFixed(1)}%` : "--"
+                    }
                 </h3>
             </div>
             <div>
@@ -14,7 +17,10 @@ export const CpuSummary = ({ summary }) => {
                     Frequency
                 </h3>
                 <h3 className="chart-value">
-                    {summary?.cpu?.frequency_ghz?.toFixed(2)}GHz
+                    {
+                        summary?.cpu?.frequency_ghz != null ?
+                        `${summary.cpu.frequency_ghz.toFixed(2)}GHz` : "--"
+                    }
                 </h3>
             </div>
             <div>
@@ -22,7 +28,10 @@ export const CpuSummary = ({ summary }) => {
                     Cores
                 </h3>
                 <h3 className="chart-value">
-                    {summary?.cpu?.physical_cores}C / {summary?.cpu?.logical_cores}T
+                    {
+                        (summary?.cpu?.physical_cores != null && summary?.cpu?.logical_cores != null) ?
+                        `${summary.cpu.physical_cores}C / ${summary.cpu.logical_cores}T` : "--"
+                    }
                 </h3>
             </div>
         </>
