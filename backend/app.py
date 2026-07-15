@@ -1,18 +1,20 @@
 from fastapi import FastAPI, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
 from routers import metrics, summary
+from os import getenv
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app = FastAPI(title="LabWatch API", version="1.0")
 router = APIRouter()
 
-origins = [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173"
-]
+raw_origins = getenv("ALLOWED_ORIGINS", default="http://localhost:5173")
+allowed_origins = [origin.strip() for origin in raw_origins.split(",")]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["GET", "POST"],
     allow_headers=["*"]
