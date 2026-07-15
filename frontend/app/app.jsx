@@ -10,10 +10,8 @@ import { RamSummary } from "./components/charts/summary/RamSummary";
 import { NetworkSummary } from "./components/charts/summary/NetworkSummary";
 import { DiskSummary } from  "./components/charts/summary/DiskSummary";
 
-// Card component
 import { ChartCard } from "./components/ui/ChartCard";
-
-// Chart helper function
+import { useSystemDarkMode } from "./hooks/useSystemDarkMode";
 import { insertMissingDataPoints } from "./utils/chartUtils";
 
 import { useState, useEffect, useRef, useMemo } from "react";
@@ -54,6 +52,7 @@ export function App() {
     const [now, setNow] = useState(Date.now());
 
     const chartData = useMemo(() => insertMissingDataPoints(analyticsData), [analyticsData]);
+    const isDark = useSystemDarkMode();
 
     // Find highest peak in dataset
     const currentNetSpikes = analyticsData?.flatMap(item => [
@@ -265,68 +264,73 @@ export function App() {
     }, []);
 
     return (
-        <div className="max-w-7xl mx-auto w-full">
-                <>
-                    <div>
-                        <div className="card flex w-max">
-                            <span className="relative flex h-2.5 w-2.5 mr-2 pt-1.5">
+        <div className="max-w-7xl mx-auto w-full pt-2">
+            <h1 className="mx-2 text-2xl font-medium text-slate-600 dark:text-zinc-400">Dashboard</h1>
+            <div className="card w-max pt-0.5!">
+                <div className="border-b-2 border-b-gray-200/60 dark:border-b-gray-800/60">
+                    <h3 className="text-sm font-medium mb-0.5 text-slate-600 dark:text-gray-400">System Status</h3>
+                </div>
+                <div className="flex flex-col">
+                    <div className="flex gap-4 mt-1">
+                        <p className="system-label">Backend</p>
+                        <div className="flex">
+                            <span className="relative flex h-2 w-2 mr-1.5 pt-1">
                                 <span className={
                                     backendOnline ? "absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75" : ""
                                 } />
-                                <span className={`relative inline-flex h-2.5 w-2.5 rounded-full ${
+                                <span className={`relative inline-flex h-2 w-2 rounded-full ${
                                     backendOnline === true ? "bg-green-500" :
                                     backendOnline === false ? "bg-red-500" :
                                     "bg-amber-500"}`
                                 } />
                             </span>
-                            <div className="grid cols-1">
-                                <h3>Backend: {determineBackendStatus(backendOnline)}</h3>
-                            </div>
+                            <p className="system-value">{determineBackendStatus(backendOnline)}</p>
                         </div>
-                        <div className="card flex w-max">
-                            <span className="relative flex h-2.5 w-2.5 mr-2 pt-1.5">
+                    </div>
+                    <div className="flex gap-4">
+                        <p className="system-label">Agent</p>
+                        <div className="flex">
+                            <span className="relative flex h-2 w-2 mr-1.5 pt-1">
                                 <span className={
                                     (backendOnline && summaryData?.agent?.online)
                                     ? "absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75" : ""
                                 } />
                                 <span className={
-                                    `relative inline-flex h-2.5 w-2.5 rounded-full
+                                    `relative inline-flex h-2 w-2 rounded-full
                                     ${!backendOnline ? "bg-amber-500" : summaryData?.agent?.online ? "bg-green-500" : "bg-red-500"}`
                                 } />
                             </span>
-                            <div className="grid cols-1">
-                                <h3>
-                                    Agent: {determineAgentStatus(summaryData?.agent?.online ?? null, backendOnline)}
-                                </h3>
-                                <h3>
-                                    Last updated: {formatLastUpdated(summaryData?.agent?.last_seen)}
-                                </h3>
-                            </div>
+                            <p className="system-value">{determineAgentStatus(summaryData?.agent?.online ?? null, backendOnline)}</p>
                         </div>
                     </div>
-                    <div className="grid grid-cols-2">
-                        <ChartCard 
-                            title="CPU Usage"
-                            chart={<CpuChart chartData={chartData} now={now} />}
-                            summary={<CpuSummary summary={summaryData?.summary} />}
-                        />
-                        <ChartCard
-                            title="RAM Usage"
-                            chart={<RamChart chartData={chartData} now={now} />}
-                            summary={<RamSummary summary={summaryData?.summary} />}
-                        />
-                        <ChartCard
-                            title="Network Usage"
-                            chart={<NetworkChart chartData={chartData} now={now} />}
-                            summary={<NetworkSummary summary={summaryData?.summary} />}
-                        />
-                        <ChartCard
-                            title="Disk Usage"
-                            chart={<DiskChart chartData={chartData} now={now} />}
-                            summary={<DiskSummary summary={summaryData?.summary} />}
-                        />
+                    <div className="flex gap-4">
+                        <p className="system-label">Last update</p>
+                        <p className="system-value">{formatLastUpdated(summaryData?.agent?.last_seen)}</p>
                     </div>
-                </>
+                </div>
+            </div>
+            <div className="grid grid-cols-2">
+                <ChartCard 
+                    title="CPU Usage"
+                    chart={<CpuChart chartData={chartData} now={now} />}
+                    summary={<CpuSummary summary={summaryData?.summary} />}
+                />
+                <ChartCard
+                    title="RAM Usage"
+                    chart={<RamChart chartData={chartData} now={now} />}
+                    summary={<RamSummary summary={summaryData?.summary} />}
+                />
+                <ChartCard
+                    title="Network Usage"
+                    chart={<NetworkChart chartData={chartData} now={now} />}
+                    summary={<NetworkSummary summary={summaryData?.summary} />}
+                />
+                <ChartCard
+                    title="Disk Usage"
+                    chart={<DiskChart chartData={chartData} now={now} />}
+                    summary={<DiskSummary summary={summaryData?.summary} />}
+                />
+            </div>
         </div>
     );
 }

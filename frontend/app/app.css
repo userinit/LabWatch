@@ -25,3 +25,11 @@ body {
 .chart-value {
     @apply text-sm text-gray-700 dark:text-gray-400;
 }
+
+.system-label {
+    @apply text-xs text-gray-700 dark:text-gray-300;
+}
+
+.system-value {
+    @apply text-xs text-slate-700 dark:text-slate-100;
+}
